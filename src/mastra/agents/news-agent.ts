@@ -1,7 +1,6 @@
 import { Agent } from '@mastra/core/agent';
 import { Memory } from '@mastra/memory';
 import { newsExtract } from '../tools/news-extract-tool';
-import { techExtract } from '../tools/tech-extract-tool';
 import { createOllama } from "ollama-ai-provider-v2";
 import { LibSQLStore } from '@mastra/libsql';
 
@@ -11,7 +10,7 @@ const memory = new Memory({
 
 
 const ollama = createOllama({
-  baseURL: "http://14.225.2.95:11434/api",
+  baseURL: process.env.SERVER,
 });
 
 export const newsAgent = new Agent({

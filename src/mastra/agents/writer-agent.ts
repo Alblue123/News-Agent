@@ -9,7 +9,7 @@ const memory = new Memory({
 
 
 const ollama = createOllama({
-  baseURL: "http://14.225.2.95:11434/api",
+  baseURL: process.env.SERVER,
 });
 
 export const writerAgent = new Agent({
