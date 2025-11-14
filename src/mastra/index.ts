@@ -53,6 +53,8 @@ client.once('ready', async () => {
         await client.application.commands.set(commands);
         console.log('✅ Slash commands registered');
     }
+
+    automateTechNews();
 });
 
 client.on('interactionCreate', async (interaction) => {
@@ -113,12 +115,10 @@ function findArticlesString(obj: any): string | null {
       }
     } else if (typeof cur === 'object') {
       for (const key of Object.keys(cur)) {
-        // prefer keys that look relevant
         if (key.toLowerCase().includes('article') && typeof cur[key] === 'string' && cur[key].trim()) {
           return cur[key];
         }
       }
-      // push nested values to search
       for (const key of Object.keys(cur)) {
         stack.push(cur[key]);
       }
@@ -144,7 +144,6 @@ async function handleTechNewsCommand(interaction: any) {
 
     console.log('Full result object:', JSON.stringify(result, null, 2));
 
-    // Get the formatted Vietnamese summary
     const extractedArticles = findArticlesString(result) || result.text || 'Không tìm thấy nội dung bài báo.';
 
     const embed = new EmbedBuilder()
@@ -152,7 +151,7 @@ async function handleTechNewsCommand(interaction: any) {
         .setDescription(extractedArticles.slice(0, 8192)) 
 
     await interaction.editReply({
-        content: `📰 **Dạ dưới đây là thông tin anh cần"`,
+        content: `📰 **Dạ dưới đây là thông tin anh cần**`,
         embeds: [embed]
     });
 }
@@ -176,9 +175,69 @@ async function handleNewsMessage(message: any, topic: string) {
         .setDescription(extractedArticles.slice(0, 8192))
     
     await message.reply({
-        content: `📰 **Dạ dưới đây là thông tin anh cần"`,
+        content: `📰 **Dạ dưới đây là thông tin anh cần**`,
         embeds: [embed]
     })
+}
+
+async function automateTechNews() {
+  const CHANNEL_ID = process.env.NEWS_CHANNEL_ID;
+  const INTERVAL_HOURS = 6;
+  const INTERVAL_MS = INTERVAL_HOURS * 60 * 60 * 1000;
+  
+  const topics = ['artificial intelligence', 'blockchain', 'cybersecurity', 'technology trends', 'machine learning'];
+
+  console.log(`🕐 Starting automatic news fetching every ${INTERVAL_HOURS} hours`);
+
+  const sendAutomaticNews = async () => {
+    try {
+      if (!CHANNEL_ID) {
+        console.error('❌ NEWS_CHANNEL_ID environment variable is not set');
+        return;
+      }
+      
+      const channel = client.channels.cache.get(CHANNEL_ID);
+      if (!channel || !channel.isTextBased() || !('send' in channel)) {
+        console.error('❌ News channel not found or is not a text channel');
+        return;
+      }
+
+      const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+      console.log(`🔄 Fetching automatic tech news for topic: ${randomTopic}`);
+
+      const result = await reporterAgent.generateVNext([
+        {
+          role: 'user',
+          content: randomTopic,
+        },
+      ]);
+
+      const extractedArticles = findArticlesString(result) || result.text || 'Không tìm thấy nội dung bài báo.';
+      
+      const embed = new EmbedBuilder()
+        .setColor(0x00ff88) 
+        .setTitle(`🤖 Automatic Tech News Update - ${randomTopic}`)
+        .setDescription(extractedArticles.slice(0, 8192)) 
+        .setTimestamp()
+        .setFooter({ text: `Next update in ${INTERVAL_HOURS} hours` });
+
+      await channel.send({
+        content: `📰 **Automatic Tech News Update** 🕐`,
+        embeds: [embed]
+      });
+
+      console.log(`✅ Automatic news sent for topic: ${randomTopic}`);
+      
+    } catch (error) {
+      console.error('❌ Error in automatic news fetching:', error);
+    }
+  };
+
+
+  setTimeout(sendAutomaticNews, 30000);
+  
+  
+  setInterval(sendAutomaticNews, INTERVAL_MS);
 }
 
 // Start the bot
