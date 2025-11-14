@@ -79,6 +79,24 @@ client.on('interactionCreate', async (interaction) => {
     }
 });
 
+//handle direct message
+client.on('messageCreate', async (message) => {
+
+  if (message.author.bot) return;
+
+  try {
+    let topic = null;
+
+    if (message.content.trim()) {
+      topic = message.content.trim();
+      await handleNewsMessage(message, topic);
+    }
+  } catch (error) {
+      console.error('❌ Discord message error:', error);
+  }
+
+});
+
 function findArticlesString(obj: any): string | null {
   const visited = new Set<any>();
   const stack = [obj];
@@ -131,14 +149,36 @@ async function handleTechNewsCommand(interaction: any) {
 
     const embed = new EmbedBuilder()
         .setColor(0x0099ff)
-        .setTitle(`📰 Tech News: ${topic}`)
-        .setDescription(extractedArticles.slice(0, 4096)) 
-        .setTimestamp();
+        .setDescription(extractedArticles.slice(0, 8192)) 
 
     await interaction.editReply({
-        content: `📰 **Latest Tech News** - Technology news about "${topic}"`,
+        content: `📰 **Dạ dưới đây là thông tin anh cần"`,
         embeds: [embed]
     });
+}
+
+async function handleNewsMessage(message: any, topic: string) {
+    console.log(`🔍 Discord user requested news via message: topic="${topic}" from ${message.author.username}`)
+    
+    await message.channel.send('Đang tìm kiếm tin tức, vui lòng chờ...');
+
+    const result = await reporterAgent.generateVNext([
+        {
+            role: 'user',
+            content: topic,
+        },
+    ]);
+
+    const extractedArticles = findArticlesString(result) || result.text || 'Không tìm thấy nội dung bài báo.';
+    
+    const embed = new EmbedBuilder()
+        .setColor(0x0099ff)
+        .setDescription(extractedArticles.slice(0, 8192))
+    
+    await message.reply({
+        content: `📰 **Dạ dưới đây là thông tin anh cần"`,
+        embeds: [embed]
+    })
 }
 
 // Start the bot
